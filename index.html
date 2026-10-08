@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Water Safety Hero - ป้องกันและช่วยเด็กจมน้ำ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0f172a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .neon-glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), inset 0 0 10px rgba(6, 182, 212, 0.2);
+            border: 2px solid #06b6d4;
+        }
+
+        .neon-glow-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), inset 0 0 10px rgba(245, 158, 11, 0.2);
+            border: 2px solid #f59e0b;
+        }
+
+        .neon-glow-emerald {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), inset 0 0 10px rgba(16, 185, 129, 0.2);
+            border: 2px solid #10b981;
+        }
+
+        .pulse-anim {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+
+        .shake-anim {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center p-2 sm:p-4 bg-slate-950">
+
+    <div class="relative w-full max-w-4xl h-full max-h-[780px] flex flex-col justify-between items-center rounded-2xl p-3 sm:p-5 bg-slate-900/95 border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.15)] overflow-hidden">
+        
+        <!-- Top HUD Header -->
+        <div class="w-full flex justify-between items-center gap-2 z-10 bg-slate-950/80 p-2.5 sm:p-3 rounded-xl border border-slate-800 shadow-md">
+            <!-- Score & Lives -->
+            <div class="flex items-center gap-3 sm:gap-5">
+                <div>
+                    <span class="text-[10px] sm:text-xs text-cyan-400 font-bold block uppercase tracking-wider">คะแนนรวม</span>
+                    <span id="scoreText" class="text-2xl sm:text-3xl font-black text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]">0</span>
+                </div>
+                <div class="border-l border-slate-800 pl-3">
+                    <span class="text-[10px] sm:text-xs text-rose-400 font-bold block uppercase tracking-wider">พลังชีวิต</span>
+                    <div id="livesContainer" class="flex gap-1 text-base sm:text-lg text-rose-500">
+                        ❤️ ❤️ ❤️
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Title Header & Difficulty Badge -->
+            <div class="text-center flex flex-col items-center">
+                <span id="levelDifficultyLabel" class="text-[11px] sm:text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40 uppercase tracking-wide mb-0.5">
+                    ระดับ 1: เริ่มต้น
+                </span>
+                <span class="text-[10px] text-slate-400 font-medium hidden sm:block">3 ป้องกัน: ไม่ใกล้ ไม่ก้ม ไม่เก็บ | 3 ช่วย: ตะโกน โยน ยื่น</span>
+            </div>
+
+            <!-- Mic Status & Level Counter -->
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-end hidden sm:flex">
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <span id="micStatusDot" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+                        <span id="micStatusText" class="text-[10px] text-slate-400 font-semibold">ไมค์: ปิด</span>
+                    </div>
+                    <div class="w-20 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div id="volumeMeter" class="h-full bg-gradient-to-r from-teal-400 to-cyan-500 w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end border-l border-slate-800 pl-3">
+                    <span class="text-[10px] sm:text-xs text-amber-400 font-bold uppercase">ด่านที่</span>
+                    <span id="levelBadge" class="text-lg sm:text-2xl font-black text-amber-300">1 / 5</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameContainer" class="relative w-full flex-1 flex flex-col items-center justify-center my-2 overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+            
+            <!-- Canvas Graphics World -->
+            <canvas id="gameCanvas" class="w-full h-full object-contain cursor-pointer"></canvas>
+
+            <!-- Detected Speech floating bubble -->
+            <div id="speechBubble" class="absolute top-3 left-1/2 -translate-x-1/2 bg-slate-900/90 text-cyan-300 border border-cyan-500/60 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-lg opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2 z-20">
+                <span>🎙️ เสียงพูด:</span>
+                <span id="detectedWord" class="text-amber-300 font-black uppercase text-sm sm:text-base">-</span>
+            </div>
+
+            <!-- Environment Badge -->
+            <div id="envBadge" class="absolute top-3 left-3 bg-slate-900/80 border border-slate-700 px-3 py-1 rounded-lg text-xs font-bold text-teal-300 shadow-md backdrop-blur-sm z-20 flex items-center gap-1.5">
+                <span>🏊‍♂️</span> <span id="envName">สถานที่: สระว่ายน้ำ</span>
+            </div>
+
+            <!-- Situation Prompt Banner -->
+            <div id="promptBanner" class="absolute bottom-3 left-1/2 -translate-x-1/2 w-11/12 max-w-xl bg-slate-900/95 backdrop-blur-md border-2 border-amber-400 px-4 py-2 rounded-xl text-center shadow-2xl z-20 transition-all duration-300">
+                <span id="promptTag" class="inline-block bg-amber-500/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold uppercase mb-0.5">
+                    สถานการณ์สุ่มเตือนภัย
+                </span>
+                <h2 id="promptTitle" class="text-xs sm:text-sm font-extrabold text-white">
+                    กำลังสุ่มโหลดสถานการณ์...
+                </h2>
+            </div>
+
+            <!-- Overlay Screen with Difficulty Level Selection -->
+            <div id="overlayScreen" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center z-30 overflow-y-auto">
+                <div class="inline-block bg-cyan-500/10 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-bold text-cyan-400 mb-1">
+                    🛡️ เกมส์จำลองป้องกันและช่วยเด็กจมน้ำ 5 ระดับความยาก
+                </div>
+                <h2 id="overlayTitle" class="text-2xl sm:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-teal-300 to-amber-300 mb-1 uppercase drop-shadow-md">
+                    WATER SAFETY HERO
+                </h2>
+                <p id="overlaySubtitle" class="text-slate-300 mb-3 text-xs max-w-lg leading-relaxed">
+                    สุ่มสถานการณ์ใน 5 สภาพแวดล้อม (สระว่ายน้ำ, แม่น้ำ, ทะเล, น้ำท่วม, โอ่ง/อ่างน้ำ) ตอบสนองด้วยสั่งการเสียงหรือปุ่มควบคุม!
+                </p>
+
+                <!-- Level Breakdown Grid -->
+                <div class="grid grid-cols-5 gap-1.5 w-full max-w-xl mb-4 text-center text-[10px] sm:text-xs">
+                    <div class="bg-slate-900 border border-emerald-500/40 p-2 rounded-lg">
+                        <span class="block text-emerald-400 font-bold mb-0.5">ระดับ 1</span>
+                        <span class="text-slate-400 block text-[9px]">ง่าย (8s)</span>
+                        <span class="text-slate-300 text-[10px]">3 ป้องกัน</span>
+                    </div>
+                    <div class="bg-slate-900 border border-teal-500/40 p-2 rounded-lg">
+                        <span class="block text-teal-400 font-bold mb-0.5">ระดับ 2</span>
+                        <span class="text-slate-400 block text-[9px]">ปานกลาง (6.5s)</span>
+                        <span class="text-slate-300 text-[10px]">3 ช่วยเหลือ</span>
+                    </div>
+                    <div class="bg-slate-900 border border-cyan-500/40 p-2 rounded-lg">
+                        <span class="block text-cyan-400 font-bold mb-0.5">ระดับ 3</span>
+                        <span class="text-slate-400 block text-[9px]">ก้าวหน้า (5s)</span>
+                        <span class="text-slate-300 text-[10px]">สุ่ม 2 สถานที่</span>
+                    </div>
+                    <div class="bg-slate-900 border border-amber-500/40 p-2 rounded-lg">
+                        <span class="block text-amber-400 font-bold mb-0.5">ระดับ 4</span>
+                        <span class="text-slate-400 block text-[9px]">เชี่ยวชาญ (4s)</span>
+                        <span class="text-slate-300 text-[10px]">สุ่ม 4 สถานที่</span>
+                    </div>
+                    <div class="bg-slate-900 border border-rose-500/40 p-2 rounded-lg">
+                        <span class="block text-rose-400 font-bold mb-0.5">ระดับ 5</span>
+                        <span class="text-slate-400 block text-[9px]">สายฟ้า (3s)</span>
+                        <span class="text-slate-300 text-[10px]">สุ่มทุกสถานที่</span>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button id="startBtn" class="px-8 py-3 bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-sm sm:text-base rounded-full hover:scale-105 active:scale-95 transition-all duration-200 neon-glow-cyan uppercase tracking-wider">
+                    🎙️ เริ่มเกมความยาก 5 ระดับ
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Control Buttons Bar (Voice & Touch Interactive) -->
+        <div class="w-full bg-slate-950/80 p-2 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center text-[10px] text-slate-400 px-1">
+                <span class="font-bold text-cyan-400 flex items-center gap-1">
+                    ⚡ สั่งการด้วยเสียงพูด หรือ กดปุ่มด้านล่างเพื่อตอบสนอง!
+                </span>
+                <button id="micToggleBtn" class="text-cyan-300 hover:text-white flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                    🎙️ <span id="micToggleLabel">อนุญาตไมค์</span>
+                </button>
+            </div>
+
+            <!-- Action Command Grid -->
+            <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                <button data-cmd="ไม่ใกล้" class="action-btn p-2 rounded-lg bg-rose-950/40 border-2 border-rose-500/60 hover:bg-rose-900/60 text-rose-200 text-xs font-extrabold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all">
+                    <span>🛑 ไม่ใกล้</span>
+                    <span class="text-[8px] text-rose-400 font-normal">พูด "ไม่ใกล้"</span>
+                </button>
+                <button data-cmd="ไม่ก้ม" class="action-btn p-2 rounded-lg bg-amber-950/40 border-2 border-amber-500/60 hover:bg-amber-900/60 text-amber-200 text-xs font-extrabold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all">
+                    <span>⚠️ ไม่ก้ม</span>
+                    <span class="text-[8px] text-amber-400 font-normal">พูด "ไม่ก้ม"</span>
+                </button>
+                <button data-cmd="ไม่เก็บ" class="action-btn p-2 rounded-lg bg-orange-950/40 border-2 border-orange-500/60 hover:bg-orange-900/60 text-orange-200 text-xs font-extrabold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all">
+                    <span>🚫 ไม่เก็บ</span>
+                    <span class="text-[8px] text-orange-400 font-normal">พูด "ไม่เก็บ"</span>
+                </button>
+                <button data-cmd="ตะโกน" class="action-btn p-2 rounded-lg bg-indigo-950/40 border-2 border-indigo-500/60 hover:bg-indigo-900/60 text-indigo-200 text-xs font-extrabold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all">
+                    <span>📢 ตะโกน</span>
+                    <span class="text-[8px] text-indigo-400 font-normal">พูด "ช่วยด้วย"</span>
+                </button>
+                <button data-cmd="โยน" class="action-btn p-2 rounded-lg bg-cyan-950/40 border-2 border-cyan-500/60 hover:bg-cyan-900/60 text-cyan-200 text-xs font-extrabold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all">
+                    <span>🛟 โยนของ</span>
+                    <span class="text-[8px] text-cyan-400 font-normal">พูด "โยน"</span>
+                </button>
+                <button data-cmd="ยื่น" class="action-btn p-2 rounded-lg bg-emerald-950/40 border-2 border-emerald-500/60 hover:bg-emerald-900/60 text-emerald-200 text-xs font-extrabold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all">
+                    <span>🎋 ยื่นของ</span>
+                    <span class="text-[8px] text-emerald-400 font-normal">พูด "ยื่น"</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sound FX Synthesizer
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playSuccess() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554.37, now + 0.1);
+                osc.frequency.setValueAtTime(659.25, now + 0.2);
+                osc.frequency.setValueAtTime(880, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+
+            playFailure() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+
+            playSplash() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+
+            playWhistle() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1800, now);
+                osc.frequency.setValueAtTime(2200, now + 0.08);
+                osc.frequency.setValueAtTime(1800, now + 0.16);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        const soundFX = new SoundFX();
+
+        // Web Speech API Controller
+        class VoiceController {
+            constructor(onCommandCallback, onVolumeCallback) {
+                this.onCommand = onCommandCallback;
+                this.onVolume = onVolumeCallback;
+                this.recognition = null;
+                this.audioCtx = null;
+                this.analyser = null;
+                this.micStream = null;
+                this.isListening = false;
+                this.isRecognizing = false;
+                this.lastCommandTime = 0;
+            }
+
+            async initMicrophone() {
+                try {
+                    this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.audioCtx = new AudioContext();
+                    const source = this.audioCtx.createMediaStreamSource(this.micStream);
+                    this.analyser = this.audioCtx.createAnalyser();
+                    this.analyser.fftSize = 256;
+                    source.connect(this.analyser);
+
+                    this.listenVolume();
+                    this.initSpeechRecognition();
+                    this.isListening = true;
+                    return true;
+                } catch (err) {
+                    console.warn("Microphone access:", err);
+                    return false;
+                }
+            }
+
+            initSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) return;
+
+                this.recognition = new SpeechRecognition();
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+                this.recognition.lang = 'th-TH';
+
+                this.recognition.onstart = () => { this.isRecognizing = true; };
+
+                this.recognition.onresult = (event) => {
+                    const lastIndex = event.results.length - 1;
+                    const transcript = event.results[lastIndex][0].transcript.trim().toLowerCase();
+                    this.processCommand(transcript);
+                };
+
+                this.recognition.onerror = (e) => {
+                    if (e.error !== 'aborted' && this.isListening) this.safeRestart();
+                };
+
+                this.recognition.onend = () => {
+                    this.isRecognizing = false;
+                    if (this.isListening) this.safeRestart();
+                };
+
+                this.safeStart();
+            }
+
+            safeStart() {
+                try {
+                    if (this.recognition && !this.isRecognizing) this.recognition.start();
+                } catch (e) {}
+            }
+
+            safeRestart() {
+                setTimeout(() => {
+                    if (this.isListening && !this.isRecognizing) this.safeStart();
+                }, 300);
+            }
+
+            processCommand(text) {
+                const now = Date.now();
+                if (now - this.lastCommandTime < 400) return;
+
+                let detected = null;
+                if (text.includes('ใกล้') || text.includes('ไม่ใกล้') || text.includes('ถอย')) {
+                    detected = 'ไม่ใกล้';
+                } else if (text.includes('ก้ม') || text.includes('ไม่ก้ม') || text.includes('อย่าก้ม')) {
+                    detected = 'ไม่ก้ม';
+                } else if (text.includes('เก็บ') || text.includes('ไม่เก็บ') || text.includes('อย่าเก็บ')) {
+                    detected = 'ไม่เก็บ';
+                } else if (text.includes('ช่วย') || text.includes('ช่วยด้วย') || text.includes('ตะโกน') || text.includes('เรียก')) {
+                    detected = 'ตะโกน';
+                } else if (text.includes('โยน') || text.includes('ห่วงยาง') || text.includes('โยนของ')) {
+                    detected = 'โยน';
+                } else if (text.includes('ยื่น') || text.includes('ไม้') || text.includes('ยื่นของ')) {
+                    detected = 'ยื่น';
+                }
+
+                if (detected) {
+                    this.lastCommandTime = now;
+                    this.onCommand(detected, text);
+                }
+            }
+
+            listenVolume() {
+                if (!this.analyser) return;
+                const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+                const checkVolume = () => {
+                    if (!this.isListening) return;
+                    this.analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                    const average = sum / dataArray.length;
+                    const volumeNorm = Math.min(100, Math.round((average / 128) * 100));
+                    this.onVolume(volumeNorm);
+                    requestAnimationFrame(checkVolume);
+                };
+                checkVolume();
+            }
+        }
+
+        // Multi-Environment Master Scenario Pool
+        const SCENARIO_POOL = [
+            // Pool Environment
+            {
+                env: 'POOL',
+                envTitle: 'สถานที่: สระว่ายน้ำ',
+                envIcon: '🏊‍♂️',
+                category: 'ป้องกัน',
+                type: 'ไม่ใกล้',
+                description: 'เด็กวิ่งเล่นลื่นริมขอบสระว่ายน้ำ! เตือนห้ามเข้าใกล้!',
+                correctCmd: 'ไม่ใกล้',
+                animationType: 'WALK_NEAR',
+                failMsg: 'ช้าไป! เด็กวิ่งลื่นขอบสระ (หลักป้องกัน: ไม่ใกล้ขอบสระ)'
+            },
+            {
+                env: 'POOL',
+                envTitle: 'สถานที่: สระว่ายน้ำ',
+                envIcon: '🏊‍♂️',
+                category: 'ป้องกัน',
+                type: 'ไม่ก้ม',
+                description: 'แว่นตาดำน้ำตกริมขอบสระ! เด็กกำลังจะก้มลงไปเก็บ!',
+                correctCmd: 'ไม่ก้ม',
+                animationType: 'BEND_OVER',
+                failMsg: 'ช้าไป! การก้มเก็บของริมสระทำให้หัวคะมำตกน้ำได้'
+            },
+            {
+                env: 'POOL',
+                envTitle: 'สถานที่: สระว่ายน้ำ',
+                envIcon: '🏊‍♂️',
+                category: 'ช่วยเหลือ',
+                type: 'โยน',
+                description: 'เด็กตกน้ำกลางสระลึก (ระยะไกลฝั่ง)! ช่วยเหลืออย่างไร?',
+                correctCmd: 'โยน',
+                animationType: 'DROWNING_FAR',
+                distanceLabel: '📏 ระยะไกลฝั่ง -> โยนห่วงยาง/โฟมลอยน้ำ',
+                failMsg: 'ช้าไป! อยู่ไกลฝั่งให้ใช้การ "โยน" ห่วงยางให้เกาะ'
+            },
+
+            // River / Canal Environment
+            {
+                env: 'RIVER',
+                envTitle: 'สถานที่: แม่น้ำ / คลอง',
+                envIcon: '🏞️',
+                category: 'ป้องกัน',
+                type: 'ไม่ใกล้',
+                description: 'เด็กเดินเที่ยวริมตลิ่งแม่น้ำลื่นมาก! เตือนถอยออก!',
+                correctCmd: 'ไม่ใกล้',
+                animationType: 'WALK_NEAR',
+                failMsg: 'ช้าไป! ตลิ่งแม่น้ำชันและลื่นมาก (หลักป้องกัน: ไม่ใกล้ตลิ่ง)'
+            },
+            {
+                env: 'RIVER',
+                envTitle: 'สถานที่: แม่น้ำ / คลอง',
+                envIcon: '🏞️',
+                category: 'ป้องกัน',
+                type: 'ไม่เก็บ',
+                description: 'เรือกระดาษลอยล่องในคลอง! เด็กพยายามจะลงไปเก็บ!',
+                correctCmd: 'ไม่เก็บ',
+                animationType: 'REACH_ITEM',
+                failMsg: 'ช้าไป! ห้ามลงไปเก็บสิ่งของที่ลอยในคลองเด็ดขาด'
+            },
+            {
+                env: 'RIVER',
+                envTitle: 'สถานที่: แม่น้ำ / คลอง',
+                envIcon: '🏞️',
+                category: 'ช่วยเหลือ',
+                type: 'ยื่น',
+                description: 'คนตกน้ำอยู่ใกล้ตลิ่งแม่น้ำ (ระยะใกล้ฝั่ง)! ช่วยเหลืออย่างไร?',
+                correctCmd: 'ยื่น',
+                animationType: 'DROWNING_NEAR',
+                distanceLabel: '📏 ระยะใกล้ฝั่ง -> หมอบลง แล้วยื่นไม้/เชือก',
+                failMsg: 'ช้าไป! อยู่ใกล้ฝั่งให้หมอบราบแล้ว "ยื่น" ไม้ให้จับ'
+            },
+
+            // Sea / Beach Environment
+            {
+                env: 'SEA',
+                envTitle: 'สถานที่: ทะเล / ชายหาด',
+                envIcon: '🏖️',
+                category: 'ช่วยเหลือ',
+                type: 'ตะโกน',
+                description: '📢 พบคนกำลังจะจมน้ำทะเล! ขั้นแรกสุดต้องทำอะไร?',
+                correctCmd: 'ตะโกน',
+                animationType: 'FALL_WATER',
+                distanceLabel: '🆘 ขั้นแรกสุด: ตะโกน "ช่วยด้วย" เรียกไลฟ์การ์ด!',
+                failMsg: 'ช้าไป! ขั้นแรกต้องตะโกนขอความช่วยเหลือจากผู้ใหญ่ริมหาด'
+            },
+            {
+                env: 'SEA',
+                envTitle: 'สถานที่: ทะเล / ชายหาด',
+                envIcon: '🏖️',
+                category: 'ป้องกัน',
+                type: 'ไม่เก็บ',
+                description: 'ห่วงยางโดนคลื่นทะเลพัดลอยออกไป! เด็กจะว่ายไปเก็บ!',
+                correctCmd: 'ไม่เก็บ',
+                animationType: 'REACH_ITEM',
+                failMsg: 'ช้าไป! คลื่นทะเลดูดแรง ห้ามลงไปเก็บสิ่งของลอยน้ำ'
+            },
+            {
+                env: 'SEA',
+                envTitle: 'สถานที่: ทะเล / ชายหาด',
+                envIcon: '🏖️',
+                category: 'ช่วยเหลือ',
+                type: 'โยน',
+                description: 'นักท่องเที่ยวจมน้ำโต้คลื่นไกลฝั่ง! ต้องช่วยเหลืออย่างไร?',
+                correctCmd: 'โยน',
+                animationType: 'DROWNING_FAR',
+                distanceLabel: '📏 ระยะไกลฝั่ง -> โยนขวดพลาสติก/ห่วงยาง',
+                failMsg: 'ช้าไป! ในทะเลไกลฝั่ง ยื่นไม่ถึง ให้ "โยน" ห่วงยาง'
+            },
+
+            // Flood Environment
+            {
+                env: 'FLOOD',
+                envTitle: 'สถานที่: พื้นที่น้ำท่วมขัง',
+                envIcon: '🌧️',
+                category: 'ป้องกัน',
+                type: 'ไม่ใกล้',
+                description: 'กระแสน้ำท่วมไหลเชี่ยวใกล้เสาไฟฟ้า! เตือนห้ามเข้าใกล้!',
+                correctCmd: 'ไม่ใกล้',
+                animationType: 'WALK_NEAR',
+                failMsg: 'ช้าไป! น้ำท่วมเชี่ยวและเสี่ยงไฟรั่ว (ห้ามเข้าใกล้)'
+            },
+            {
+                env: 'FLOOD',
+                envTitle: 'สถานที่: พื้นที่น้ำท่วมขัง',
+                envIcon: '🌧️',
+                category: 'ช่วยเหลือ',
+                type: 'ตะโกน',
+                description: '📢 มีคนล้มลงกลางกระแสน้ำท่วม! ตะโกนเรียกผู้ใหญ่ทันที!',
+                correctCmd: 'ตะโกน',
+                animationType: 'FALL_WATER',
+                distanceLabel: '🆘 ตะโกนขอความช่วยเหลือทันที!',
+                failMsg: 'ช้าไป! ต้องตะโกนขอความช่วยเหลือผู้ใหญ่ฉุกเฉิน'
+            },
+
+            // Home Water Container Environment
+            {
+                env: 'HOME',
+                envTitle: 'สถานที่: โอ่งน้ำ / อ่างน้ำในบ้าน',
+                envIcon: '🏠',
+                category: 'ป้องกัน',
+                type: 'ไม่ก้ม',
+                description: 'เด็กเล็กกำลังก้มชะโงกดูน้ำในโอ่งใหญ่หลังบ้าน!',
+                correctCmd: 'ไม่ก้ม',
+                animationType: 'BEND_OVER',
+                failMsg: 'ช้าไป! เด็กเล็กชะโงกหัวลงโอ่งสามารถจมน้ำหัวคะมำได้'
+            },
+            {
+                env: 'HOME',
+                envTitle: 'สถานที่: โอ่งน้ำ / อ่างน้ำในบ้าน',
+                envIcon: '🏠',
+                category: 'ป้องกัน',
+                type: 'ไม่เก็บ',
+                description: 'เป็ดยางตกอยู่ในอ่างอาบน้ำลึก! ห้ามก้มเอื้อมเก็บ!',
+                correctCmd: 'ไม่เก็บ',
+                animationType: 'REACH_ITEM',
+                failMsg: 'ช้าไป! ของตกในอ่างน้ำลึกให้เรียกผู้ใหญ่เก็บให้'
+            }
+        ];
+
+        // 5 Difficulty Levels Definition
+        const DIFFICULTY_LEVELS = [
+            { level: 1, name: 'ระดับ 1: เริ่มต้น', timer: 8.0, scenarioCount: 3, allowedEnvs: ['POOL', 'RIVER'] },
+            { level: 2, name: 'ระดับ 2: ปานกลาง', timer: 6.5, scenarioCount: 3, allowedEnvs: ['POOL', 'SEA', 'RIVER'] },
+            { level: 3, name: 'ระดับ 3: ก้าวหน้า', timer: 5.0, scenarioCount: 4, allowedEnvs: ['POOL', 'RIVER', 'SEA', 'FLOOD'] },
+            { level: 4, name: 'ระดับ 4: ผู้เชี่ยวชาญ', timer: 4.0, scenarioCount: 4, allowedEnvs: ['POOL', 'RIVER', 'SEA', 'FLOOD', 'HOME'] },
+            { level: 5, name: 'ระดับ 5: ฮีโร่สายฟ้า', timer: 3.0, scenarioCount: 5, allowedEnvs: ['POOL', 'RIVER', 'SEA', 'FLOOD', 'HOME'] }
+        ];
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI References
+        const scoreText = document.getElementById('scoreText');
+        const livesContainer = document.getElementById('livesContainer');
+        const levelBadge = document.getElementById('levelBadge');
+        const levelDifficultyLabel = document.getElementById('levelDifficultyLabel');
+        const overlayScreen = document.getElementById('overlayScreen');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const startBtn = document.getElementById('startBtn');
+        const speechBubble = document.getElementById('speechBubble');
+        const detectedWord = document.getElementById('detectedWord');
+        const envBadge = document.getElementById('envBadge');
+        const envName = document.getElementById('envName');
+        const promptTag = document.getElementById('promptTag');
+        const promptTitle = document.getElementById('promptTitle');
+        const micStatusDot = document.getElementById('micStatusDot');
+        const micStatusText = document.getElementById('micStatusText');
+        const volumeMeter = document.getElementById('volumeMeter');
+        const micToggleBtn = document.getElementById('micToggleBtn');
+        const micToggleLabel = document.getElementById('micToggleLabel');
+
+        let width = 800;
+        let height = 400;
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            width = canvas.width;
+            height = canvas.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game Engine Variables
+        let gameState = 'START';
+        let currentLevelIdx = 0; // 0 to 4 (Level 1 to 5)
+        let activeLevelScenarios = [];
+        let currentScenarioIdx = 0;
+        let score = 0;
+        let lives = 3;
+        let currentTimer = 0;
+        let timerInterval = null;
+        let animationFrame = 0;
+        let scenarioResolved = false;
+
+        let childPos = { x: 150, y: 220 };
+        let actionEffect = null;
+
+        const voiceCtrl = new VoiceController(
+            (command, rawText) => {
+                showSpeechDetected(rawText);
+                handlePlayerAction(command);
+            },
+            (vol) => { volumeMeter.style.width = `${vol}%`; }
+        );
+
+        function showSpeechDetected(text) {
+            detectedWord.textContent = text;
+            speechBubble.style.opacity = '1';
+            setTimeout(() => { speechBubble.style.opacity = '0'; }, 1500);
+        }
+
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cmd = btn.getAttribute('data-cmd');
+                showSpeechDetected(cmd);
+                handlePlayerAction(cmd);
+            });
+        });
+
+        micToggleBtn.addEventListener('click', async () => {
+            soundFX.init();
+            const ok = await voiceCtrl.initMicrophone();
+            if (ok) {
+                micStatusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+                micStatusText.textContent = "ไมค์: พร้อมใช้งาน";
+                micToggleLabel.textContent = "ไมค์ทำงานอยู่";
+            }
+        });
+
+        startBtn.addEventListener('click', async () => {
+            soundFX.init();
+            if (!voiceCtrl.isListening) await voiceCtrl.initMicrophone();
+            startGame();
+        });
+
+        function startGame() {
+            gameState = 'PLAYING';
+            score = 0;
+            lives = 3;
+            currentLevelIdx = 0;
+            scoreText.textContent = '0';
+            updateLivesUI();
+            overlayScreen.classList.add('hidden');
+            setupLevel(currentLevelIdx);
+        }
+
+        function updateLivesUI() {
+            let hearts = '';
+            for (let i = 0; i < lives; i++) hearts += '❤️ ';
+            for (let i = lives; i < 3; i++) hearts += '🖤 ';
+            livesContainer.innerHTML = hearts;
+        }
+
+        function setupLevel(levelIndex) {
+            if (levelIndex >= DIFFICULTY_LEVELS.length) {
+                gameWin();
+                return;
+            }
+
+            currentLevelIdx = levelIndex;
+            const diffConfig = DIFFICULTY_LEVELS[levelIndex];
+            levelDifficultyLabel.textContent = diffConfig.name;
+
+            // Pick random scenarios based on allowed environments
+            const filteredPool = SCENARIO_POOL.filter(s => diffConfig.allowedEnvs.includes(s.env));
+            
+            // Shuffle array
+            const shuffled = [...filteredPool].sort(() => 0.5 - Math.random());
+            activeLevelScenarios = shuffled.slice(0, diffConfig.scenarioCount);
+
+            loadScenario(0);
+        }
+
+        function loadScenario(scenarioIndex) {
+            if (scenarioIndex >= activeLevelScenarios.length) {
+                // Passed current difficulty level! Advance to next level
+                if (currentLevelIdx + 1 < DIFFICULTY_LEVELS.length) {
+                    soundFX.playSuccess();
+                    setupLevel(currentLevelIdx + 1);
+                } else {
+                    gameWin();
+                }
+                return;
+            }
+
+            currentScenarioIdx = scenarioIndex;
+            const scenario = activeLevelScenarios[scenarioIndex];
+            const diffConfig = DIFFICULTY_LEVELS[currentLevelIdx];
+
+            scenarioResolved = false;
+            actionEffect = null;
+            animationFrame = 0;
+
+            levelBadge.textContent = `${currentLevelIdx + 1} / ${DIFFICULTY_LEVELS.length}`;
+            envName.textContent = `${scenario.envIcon} ${scenario.envTitle}`;
+            promptTag.textContent = `${diffConfig.name} | หมวด: ${scenario.category} (${scenario.type})`;
+            promptTitle.textContent = scenario.description;
+
+            childPos = { x: width * 0.28, y: height * 0.58 };
+
+            currentTimer = diffConfig.timer;
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                if (gameState !== 'PLAYING') return;
+                currentTimer -= 0.1;
+
+                if (currentTimer <= 0) {
+                    clearInterval(timerInterval);
+                    handleScenarioFail(scenario.failMsg);
+                }
+            }, 100);
+        }
+
+        function handlePlayerAction(command) {
+            if (gameState !== 'PLAYING' || scenarioResolved) return;
+
+            const scenario = activeLevelScenarios[currentScenarioIdx];
+
+            if (command === scenario.correctCmd) {
+                scenarioResolved = true;
+                clearInterval(timerInterval);
+                soundFX.playSuccess();
+
+                const bonusPoints = Math.round(currentTimer * 15) + (currentLevelIdx + 1) * 20;
+                score += 100 + bonusPoints;
+                scoreText.textContent = score;
+
+                triggerActionEffect(command);
+
+                setTimeout(() => {
+                    loadScenario(currentScenarioIdx + 1);
+                }, 1800);
+            } else {
+                soundFX.playFailure();
+                gameContainer.classList.add('shake-anim');
+                setTimeout(() => gameContainer.classList.remove('shake-anim'), 400);
+            }
+        }
+
+        function triggerActionEffect(cmd) {
+            if (cmd === 'ไม่ใกล้') {
+                actionEffect = { type: 'BARRIER', x: childPos.x + 40, y: childPos.y - 30 };
+            } else if (cmd === 'ไม่ก้ม' || cmd === 'ไม่เก็บ') {
+                actionEffect = { type: 'STOP_SIGN', x: childPos.x + 20, y: childPos.y - 60 };
+            } else if (cmd === 'ตะโกน') {
+                actionEffect = { type: 'SOUNDWAVE', x: childPos.x, y: childPos.y - 40, radius: 10 };
+                soundFX.playWhistle();
+            } else if (cmd === 'โยน') {
+                actionEffect = { type: 'LIFEBUOY', x: width * 0.1, y: height * 0.4, targetX: childPos.x + 80, targetY: childPos.y, progress: 0 };
+            } else if (cmd === 'ยื่น') {
+                actionEffect = { type: 'BAMBOO_STICK' };
+            }
+        }
+
+        function handleScenarioFail(msg) {
+            scenarioResolved = true;
+            lives--;
+            updateLivesUI();
+            soundFX.playFailure();
+            soundFX.playSplash();
+
+            promptTitle.textContent = `❌ ${msg}`;
+
+            setTimeout(() => {
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    loadScenario(currentScenarioIdx + 1);
+                }
+            }, 2200);
+        }
+
+        function gameWin() {
+            gameState = 'GAMEOVER';
+            soundFX.playSuccess();
+            overlayTitle.textContent = '🏆 สุดยอด WATER SAFETY HERO!';
+            overlaySubtitle.innerHTML = `ยินดีด้วย! คุณผ่านการทดสอบหลักความปลอดภัยทางน้ำครบ <b>5 ระดับความยาก</b><br>คะแนนความปลอดภัยของคุณ: <span class="text-cyan-300 font-extrabold text-2xl">${score}</span> คะแนน`;
+            startBtn.textContent = 'เล่นใหม่อีกครั้ง';
+            overlayScreen.classList.remove('hidden');
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            overlayTitle.textContent = '💔 จบการทดสอบ';
+            overlaySubtitle.innerHTML = `คุณมาถึง <b>${DIFFICULTY_LEVELS[currentLevelIdx].name}</b><br>จดจำหลัก "3 ป้องกัน 3 ช่วยเหลือ" แล้วลองใหม่อีกครั้ง!<br>คะแนนของคุณ: <span class="text-amber-300 font-bold">${score}</span>`;
+            startBtn.textContent = 'ลองใหม่อีกครั้ง';
+            overlayScreen.classList.remove('hidden');
+        }
+
+        // Multi-Environment Graphics Renderer
+        function drawBackground(env) {
+            const waterY = height * 0.52;
+            const bankWidth = width * 0.38;
+
+            if (env === 'POOL') {
+                // Swimming pool graphics
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+                bgGrad.addColorStop(0, '#0284c7');
+                bgGrad.addColorStop(1, '#0369a1');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, width, height);
+
+                // Tile bank
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fillRect(0, waterY, bankWidth, height - waterY);
+                // Lane line
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(bankWidth - 10, waterY, 10, height - waterY);
+
+                // Water pool
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.85)';
+                ctx.fillRect(bankWidth, waterY, width - bankWidth, height - waterY);
+
+            } else if (env === 'RIVER') {
+                // River/Canal graphics
+                ctx.fillStyle = '#065f46'; // Grassy sky
+                ctx.fillRect(0, 0, width, height);
+
+                // Dirt/Grass River bank
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(0, waterY, bankWidth, height - waterY);
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(bankWidth - 14, waterY, 14, height - waterY);
+
+                // River water
+                ctx.fillStyle = 'rgba(15, 118, 110, 0.9)';
+                ctx.fillRect(bankWidth, waterY, width - bankWidth, height - waterY);
+
+            } else if (env === 'SEA') {
+                // Sea / Beach graphics
+                ctx.fillStyle = '#0284c7';
+                ctx.fillRect(0, 0, width, height * 0.52);
+
+                // Sandy Beach
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(0, waterY, bankWidth, height - waterY);
+
+                // Ocean water
+                ctx.fillStyle = 'rgba(2, 132, 199, 0.85)';
+                ctx.fillRect(bankWidth, waterY, width - bankWidth, height - waterY);
+
+            } else if (env === 'FLOOD') {
+                // Flood environment
+                ctx.fillStyle = '#334155'; // Dark stormy sky
+                ctx.fillRect(0, 0, width, height);
+
+                // Submerged pavement
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(0, waterY, bankWidth, height - waterY);
+
+                // Murky muddy flood water
+                ctx.fillStyle = 'rgba(120, 83, 15, 0.85)';
+                ctx.fillRect(bankWidth, waterY, width - bankWidth, height - waterY);
+
+                // Rain drops animation
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 15; i++) {
+                    const rx = (i * 60 + animationFrame * 8) % width;
+                    const ry = (i * 40 + animationFrame * 12) % height;
+                    ctx.beginPath();
+                    ctx.moveTo(rx, ry);
+                    ctx.lineTo(rx - 5, ry + 15);
+                    ctx.stroke();
+                }
+
+            } else if (env === 'HOME') {
+                // Home water container graphics
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(0, 0, width, height);
+
+                // Tile Floor
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(0, waterY, bankWidth, height - waterY);
+
+                // Water Barrel / Tub
+                ctx.fillStyle = '#0284c7';
+                ctx.fillRect(bankWidth, waterY, width - bankWidth, height - waterY);
+            }
+
+            // Water ripple waves
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = bankWidth; x < width; x += 25) {
+                const waveY = waterY + Math.sin((x + animationFrame * 3) * 0.05) * 4;
+                if (x === bankWidth) ctx.moveTo(x, waveY);
+                else ctx.lineTo(x, waveY);
+            }
+            ctx.stroke();
+        }
+
+        function drawCharacter(x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Head
+            ctx.fillStyle = '#fcd34d';
+            ctx.beginPath();
+            ctx.arc(0, -35, 16, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.arc(0, -40, 16, Math.PI, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(-5, -36, 2.5, 0, Math.PI * 2);
+            ctx.arc(5, -36, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Shirt
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(-12, -18, 24, 26);
+
+            // Shorts
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(-10, 8, 8, 16);
+            ctx.fillRect(2, 8, 8, 16);
+
+            ctx.restore();
+        }
+
+        function drawScenarioProps(scenario) {
+            const bankWidth = width * 0.38;
+            const waterY = height * 0.52;
+
+            if (scenario.distanceLabel) {
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.fillRect(width * 0.03, 12, width * 0.55, 26);
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(width * 0.03, 12, width * 0.55, 26);
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 12px Kanit';
+                ctx.fillText(scenario.distanceLabel, width * 0.04, 29);
+            }
+
+            if (scenario.type === 'ไม่ก้ม') {
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.ellipse(bankWidth - 8, waterY + 15, 10, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (scenario.type === 'ไม่เก็บ') {
+                const ballX = bankWidth + 50 + Math.sin(animationFrame * 0.05) * 5;
+                const ballY = waterY + 40;
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(ballX, ballY, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(ballX, ballY, 7, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawActionEffect() {
+            if (!actionEffect) return;
+
+            if (actionEffect.type === 'BARRIER') {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 6;
+                ctx.strokeRect(actionEffect.x, actionEffect.y - 40, 10, 80);
+                ctx.fillStyle = '#fef08a';
+                ctx.font = 'bold 14px Kanit';
+                ctx.fillText('🛑 ถอยห่าง!', actionEffect.x - 30, actionEffect.y - 50);
+            } else if (actionEffect.type === 'STOP_SIGN') {
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(actionEffect.x, actionEffect.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px Kanit';
+                ctx.fillText('STOP', actionEffect.x - 14, actionEffect.y + 4);
+            } else if (actionEffect.type === 'SOUNDWAVE') {
+                actionEffect.radius += 4;
+                ctx.strokeStyle = 'rgba(245, 158, 11, ' + Math.max(0, 1 - actionEffect.radius / 100) + ')';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(actionEffect.x, actionEffect.y, actionEffect.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = 'bold 18px Kanit';
+                ctx.fillText('📢 ช่วยด้วยยย!!', actionEffect.x - 45, actionEffect.y - actionEffect.radius - 10);
+            } else if (actionEffect.type === 'LIFEBUOY') {
+                if (actionEffect.progress < 1) actionEffect.progress += 0.05;
+                const curX = actionEffect.x + (actionEffect.targetX - actionEffect.x) * actionEffect.progress;
+                const curY = actionEffect.y + (actionEffect.targetY - actionEffect.y) * actionEffect.progress - Math.sin(actionEffect.progress * Math.PI) * 50;
+
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(actionEffect.x, actionEffect.y);
+                ctx.lineTo(curX, curY);
+                ctx.stroke();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(curX, curY, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(curX, curY, 8, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (actionEffect.type === 'BAMBOO_STICK') {
+                ctx.strokeStyle = '#84cc16';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.moveTo(width * 0.1, height * 0.6);
+                ctx.lineTo(childPos.x, childPos.y);
+                ctx.stroke();
+            }
+        }
+
+        function drawTimerBar() {
+            if (gameState !== 'PLAYING') return;
+
+            const diffConfig = DIFFICULTY_LEVELS[currentLevelIdx];
+            const maxTime = diffConfig.timer;
+            const pct = Math.max(0, currentTimer / maxTime);
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+            ctx.fillRect(width * 0.2, 15, width * 0.6, 12);
+
+            ctx.fillStyle = pct > 0.4 ? '#10b981' : '#ef4444';
+            ctx.fillRect(width * 0.2, 15, (width * 0.6) * pct, 12);
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(width * 0.2, 15, width * 0.6, 12);
+        }
+
+        function updateGameVisuals() {
+            animationFrame++;
+            if (gameState === 'PLAYING' && activeLevelScenarios.length > 0) {
+                const scenario = activeLevelScenarios[currentScenarioIdx];
+                const bankWidth = width * 0.38;
+                const waterY = height * 0.52;
+
+                if (scenario.animationType === 'WALK_NEAR') {
+                    if (!scenarioResolved) childPos.x = Math.min(bankWidth - 18, childPos.x + 0.5);
+                } else if (scenario.animationType === 'DROWNING_FAR') {
+                    childPos.x = bankWidth + 120;
+                    childPos.y = waterY + 45 + Math.sin(animationFrame * 0.1) * 6;
+                } else if (scenario.animationType === 'DROWNING_NEAR') {
+                    childPos.x = bankWidth + 40;
+                    childPos.y = waterY + 35 + Math.sin(animationFrame * 0.1) * 4;
+                } else if (scenario.animationType === 'FALL_WATER') {
+                    childPos.x = bankWidth + 30;
+                    childPos.y = waterY + 30 + Math.sin(animationFrame * 0.1) * 5;
+                }
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            if (gameState === 'PLAYING' && activeLevelScenarios.length > 0) {
+                const scenario = activeLevelScenarios[currentScenarioIdx];
+                drawBackground(scenario.env);
+                drawScenarioProps(scenario);
+                drawCharacter(childPos.x, childPos.y);
+                drawActionEffect();
+                drawTimerBar();
+            } else {
+                drawBackground('POOL');
+            }
+
+            updateGameVisuals();
+            requestAnimationFrame(render);
+        }
+
+        window.onload = () => {
+            render();
+        };
+    </script>
+</body>
+</html>
